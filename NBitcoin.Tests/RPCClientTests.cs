@@ -23,8 +23,8 @@ using static NBitcoin.Tests.Comparer;
 namespace NBitcoin.Tests
 {
 	//Require a rpc server on test network running on default port with -rpcuser=NBitcoin -rpcpassword=NBitcoinPassword
-	//For me : 
-	//"bitcoin-qt.exe" -testnet -server -rpcuser=NBitcoin -rpcpassword=NBitcoinPassword 
+	//For me :
+	//"bitcoin-qt.exe" -testnet -server -rpcuser=NBitcoin -rpcpassword=NBitcoinPassword
 	[Trait("RPCClient", "RPCClient")]
 	public class RPCClientTests
 	{
@@ -363,6 +363,28 @@ namespace NBitcoin.Tests
 
 				Assert.Equal(builder.Network, response.Chain);
 				Assert.Equal(builder.Network.GetGenesis().GetHash(), response.BestBlockHash);
+
+				Assert.Contains(response.SoftForks, x => x.Bip == "segwit");
+				Assert.Contains(response.SoftForks, x => x.Bip == "csv");
+				Assert.Contains(response.SoftForks, x => x.Bip == "bip34");
+				Assert.Contains(response.SoftForks, x => x.Bip == "bip65");
+				Assert.Contains(response.SoftForks, x => x.Bip == "bip66");
+			}
+		}
+
+		// Test it still works with 0.18.1
+		[Fact]
+		public async Task CanGetBlockchainInfoWithCore0181()
+		{
+			using (var builder = NodeBuilderEx.Create(NodeDownloadData.Bitcoin.v0_18_1))
+			{
+				var rpc = builder.CreateNode().CreateRPCClient();
+				builder.StartAll();
+				var response = await rpc.GetBlockchainInfoAsync();
+
+				Assert.Equal(builder.Network, response.Chain);
+				Assert.Equal(builder.Network.GetGenesis().GetHash(), response.BestBlockHash);
+
 				Assert.Contains(response.Bip9SoftForks, x => x.Name == "segwit");
 				Assert.Contains(response.Bip9SoftForks, x => x.Name == "csv");
 				Assert.Contains(response.SoftForks, x => x.Bip == "bip34");
@@ -581,6 +603,32 @@ namespace NBitcoin.Tests
 				var blockId = rpc.GetBestBlockHash();
 				var block = rpc.GetBlock(blockId);
 				Assert.True(block.CheckMerkleRoot());
+			}
+		}
+
+		[Fact]
+		public void CanSendLowValueTransactionFromRPC()
+		{
+			using (var builder = NodeBuilderEx.Create())
+			{
+				var rpc = builder.CreateNode().CreateRPCClient();
+				builder.StartAll();
+				rpc.Generate(101);
+				var receiver = new Key();
+				var receiverAddress = receiver.PubKey.WitHash.GetAddress(builder.Network);
+				var txid = rpc.SendToAddress(receiverAddress, Money.Satoshis(1000));
+				var tx = rpc.GetRawTransaction(txid);
+				var coin = tx.Outputs.AsCoins().Where(c => c.ScriptPubKey == receiverAddress.ScriptPubKey);
+				var txBuilder = builder.Network.CreateTransactionBuilder();
+				txBuilder.AddCoins(coin);
+				txBuilder.AddKeys(receiver);
+				txBuilder.Send(new Key().ScriptPubKey, Money.Satoshis(600));
+				txBuilder.SetChange(new Key().PubKey.WitHash);
+				// The dust should be 294, so should have 2 outputs
+				txBuilder.SendFees(Money.Satoshis(400 - 294));
+				var signed = txBuilder.BuildTransaction(true);
+				Assert.Equal(2, signed.Outputs.Count);
+				Assert.NotNull(rpc.SendRawTransaction(tx));
 			}
 		}
 
@@ -1078,6 +1126,39 @@ namespace NBitcoin.Tests
 		}
 
 		[Fact]
+		public async Task GetBlockFilterAsync()
+		{
+			using (var builder = NodeBuilderEx.Create())
+			{
+				var node = builder.CreateNode();
+				var rpc = node.CreateRPCClient();
+				builder.StartAll();
+				node.Generate(101);
+
+				var prevFilterHeader = uint256.Zero;
+				for (var height = 0; height < 101; height++)
+				{
+					var block = rpc.GetBlock(height);
+					var blockHash = block.GetHash();
+					var blockFilter = rpc.GetBlockFilter(blockHash);
+					var sameFilter = await rpc.GetBlockFilterAsync(blockHash);
+					Assert.Equal(blockFilter.Header, sameFilter.Header);
+					Assert.Equal(blockFilter.Filter.ToString(), sameFilter.Filter.ToString());
+
+					Assert.Equal(blockFilter.Header, blockFilter.Filter.GetHeader(prevFilterHeader));
+
+					byte[] FilterKey(uint256 hash) => hash.ToBytes().SafeSubarray(0, 16);
+					var coinbaseTx = block.Transactions[0];
+					var minerScriptPubKey = coinbaseTx.Outputs[0].ScriptPubKey;
+					Assert.True(blockFilter.Filter.MatchAny(new[] { minerScriptPubKey.ToBytes() }, FilterKey(blockHash)));
+					Assert.False(blockFilter.Filter.MatchAny(new[] { RandomUtils.GetBytes(20) }, FilterKey(blockHash)));
+
+					prevFilterHeader = blockFilter.Header;
+				}
+			}
+		}
+
+		[Fact]
 		public void CanTestMempoolAccept()
 		{
 			using (var builder = NodeBuilderEx.Create())
@@ -1094,7 +1175,41 @@ namespace NBitcoin.Tests
 				tx.Inputs.Add(coin.OutPoint);
 				tx.Outputs.Add(tx.Outputs.CreateNewTxOut(coin.Amount - fee, new Key().PubKey.Hash.ScriptPubKey));
 
-				var result = rpc.TestMempoolAccept(tx);
+				var result = rpc.TestMempoolAccept(tx, new FeeRate(1.0m));
+				Assert.False(result.IsAllowed);
+				Assert.Equal(Protocol.RejectCode.NONSTANDARD, result.RejectCode);
+				Assert.Equal("bad-txns-nonstandard-inputs", result.RejectReason);
+
+				var signedTx = rpc.SignRawTransactionWithWallet(new SignRawTransactionRequest()
+				{
+					Transaction = tx
+				});
+
+				result = rpc.TestMempoolAccept(signedTx.SignedTransaction, false);
+				Assert.True(result.IsAllowed);
+				Assert.Equal(Protocol.RejectCode.INVALID, result.RejectCode);
+				Assert.Equal(string.Empty, result.RejectReason);
+			}
+		}
+
+		[Fact]
+		public void CanTestMempoolAcceptWithCore0181()
+		{
+			using (var builder = NodeBuilderEx.Create(NodeDownloadData.Bitcoin.v0_18_1))
+			{
+				var node = builder.CreateNode();
+				var rpc = node.CreateRPCClient();
+				builder.StartAll();
+				node.Generate(101);
+
+				var coins = rpc.ListUnspent();
+				var coin = coins[0];
+				var fee = Money.Coins(0.0001m);
+				var tx = Transaction.Create(node.Network);
+				tx.Inputs.Add(coin.OutPoint);
+				tx.Outputs.Add(tx.Outputs.CreateNewTxOut(coin.Amount - fee, new Key().PubKey.Hash.ScriptPubKey));
+
+				var result = rpc.TestMempoolAccept(tx, new FeeRate(1.0m));
 				Assert.False(result.IsAllowed);
 				Assert.Equal(Protocol.RejectCode.INVALID, result.RejectCode);
 				Assert.Equal("mandatory-script-verify-flag-failed (Operation not valid with the current stack size)", result.RejectReason);
@@ -1104,9 +1219,9 @@ namespace NBitcoin.Tests
 					Transaction = tx
 				});
 
-				result = rpc.TestMempoolAccept(signedTx.SignedTransaction);
+				result = rpc.TestMempoolAccept(signedTx.SignedTransaction, false);
 				Assert.True(result.IsAllowed);
-				Assert.Equal((Protocol.RejectCode)0, result.RejectCode);
+				Assert.Equal(Protocol.RejectCode.INVALID, result.RejectCode);
 				Assert.Equal(string.Empty, result.RejectReason);
 			}
 		}
@@ -1285,6 +1400,20 @@ namespace NBitcoin.Tests
 		}
 
 		[Fact]
+		public async Task CanQueryUptimeAsync()
+		{
+			using (var builder = NodeBuilderEx.Create())
+			{
+				var node = builder.CreateNode();
+				node.Start();
+				var rpc = node.CreateRPCClient();
+				var uptime1 = rpc.Uptime();
+				var uptime2 = await rpc.UptimeAsync();
+				Assert.Equal(uptime1.TotalSeconds, uptime2.TotalSeconds, 3);
+			}
+		}
+
+		[Fact]
 		public async Task CanGenerateBlocks()
 		{
 			using (var builder = NodeBuilderEx.Create())
@@ -1404,7 +1533,7 @@ namespace NBitcoin.Tests
 
 				var client = node.CreateRPCClient();
 
-				// ensure the wallet has whole kinds of coins ... 
+				// ensure the wallet has whole kinds of coins ...
 				var addr = client.GetNewAddress();
 				client.GenerateToAddress(101, addr);
 				addr = client.GetNewAddress(new GetNewAddressRequest() { AddressType = AddressType.Bech32 });
@@ -1587,7 +1716,7 @@ namespace NBitcoin.Tests
 
 				// Finally, anyone can finalize and broadcast the psbt.
 				var tx = psbtCombined.Finalize().ExtractTransaction();
-				var result = alice.TestMempoolAccept(tx);
+				var result = alice.TestMempoolAccept(tx, false);
 				Assert.True(result.IsAllowed, result.RejectReason);
 			}
 		}

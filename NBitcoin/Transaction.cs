@@ -10,7 +10,7 @@ using System.Linq;
 namespace NBitcoin
 {
 #nullable enable
-	public class OutPoint : IBitcoinSerializable
+	public class OutPoint : IBitcoinSerializable, IEquatable<OutPoint>
 	{
 		public bool IsNull
 		{
@@ -180,12 +180,15 @@ namespace NBitcoin
 		{
 			return !(a == b);
 		}
+
 		public override bool Equals(object? obj)
 		{
-			var item = obj as OutPoint;
-			if (object.ReferenceEquals(null, item))
-				return false;
-			return item == this;
+			return Equals(obj as OutPoint);
+		}
+
+		public bool Equals(OutPoint? other)
+		{
+			return other == this;
 		}
 
 		public override int GetHashCode()
@@ -644,8 +647,16 @@ namespace NBitcoin
 		{
 			if (minRelayTxFee == null)
 				throw new ArgumentNullException("minRelayTxFee");
-			int nSize = this.GetSerializedSize() + 148;
-			return 3 * minRelayTxFee.GetFee(nSize);
+
+			// OutPoint (32 + 4) + script_size (1) + sequence (4)
+			int inputSize = 32 + 4 + 1 + 4;
+			inputSize += ScriptPubKey.IsScriptType(ScriptType.Witness)
+				? 107 / Transaction.WITNESS_SCALE_FACTOR
+				: 107;
+
+			int outputSize = this.GetSerializedSize();
+
+			return 3 * minRelayTxFee.GetFee(inputSize + outputSize);
 		}
 
 		#region IBitcoinSerializable Members
@@ -1618,6 +1629,22 @@ namespace NBitcoin
 			var weight = strippedSize * (WITNESS_SCALE_FACTOR - 1) + totalSize;
 			return (weight + WITNESS_SCALE_FACTOR - 1) / WITNESS_SCALE_FACTOR;
 		}
+
+		/// <summary>
+		/// Sign a specific coin with the given secret
+		/// </summary>
+		/// <param name="key">Private key</param>
+		/// <param name="coin">Coin to sign</param>
+		public void Sign(BitcoinSecret key, ICoin coin)
+			=> Sign(key, new[] { coin });
+
+		/// <summary>
+		/// Sign a specific coin with the given secret
+		/// </summary>
+		/// <param name="key">Private key</param>
+		/// <param name="coins">Coins to sign</param>
+		public void Sign(BitcoinSecret key, IEnumerable<ICoin> coins)
+			=> Sign(new[] { key }, coins);
 
 		/// <summary>
 		/// Sign a specific coin with the given secret

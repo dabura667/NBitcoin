@@ -36,6 +36,7 @@ namespace NBitcoin
 			return false;
 		}
 
+
 		public virtual Base58CheckEncoder GetBase58CheckEncoder()
 		{
 			return (Base58CheckEncoder)Encoders.Base58Check;

@@ -70,7 +70,19 @@ namespace NBitcoin
 		/// This should be turned false only in the test.
 		/// ref: https://github.com/bitcoin/bitcoin/pull/13666
 		/// </summary>
-		public bool UseLowR { get; set; } = true;
+		[Obsolete("Pass SigningOptions with SigningOptions.EnforceLowR set when signing instead")]
+		public bool UseLowR
+		{
+			get
+			{
+				return _UseLowR is bool v ? v : true;
+			}
+			set
+			{
+				_UseLowR = value;
+			}
+		}
+		internal bool? _UseLowR;
 
 		/// <summary>
 		/// Use custom builder extensions to customize finalization
@@ -86,7 +98,9 @@ namespace NBitcoin
 		{
 			return new PSBTSettings()
 			{
+#pragma warning disable CS0618 // Type or member is obsolete
 				UseLowR = UseLowR,
+#pragma warning restore CS0618 // Type or member is obsolete
 				CustomBuilderExtensions = CustomBuilderExtensions?.ToArray(),
 				IsSmart = IsSmart
 			};
@@ -274,6 +288,8 @@ namespace NBitcoin
 		{
 			if (coins == null)
 				return this;
+			if (IsAllFinalized())
+				return this;
 			foreach (var coin in coins)
 			{
 				var indexedInput = this.Inputs.FindIndexedInput(coin.Outpoint);
@@ -316,6 +332,8 @@ namespace NBitcoin
 				txsById.TryAdd(tx.GetHash(), tx);
 			foreach (var input in Inputs)
 			{
+				if (input.IsFinalized())
+					continue;
 				if (input.WitnessUtxo == null && txsById.TryGetValue(input.TxIn.PrevOut.Hash, out var tx))
 				{
 					if (input.TxIn.PrevOut.N >= tx.Outputs.Count)
@@ -339,9 +357,12 @@ namespace NBitcoin
 		/// <summary>
 		/// If an other PSBT has a specific field and this does not have it, then inject that field to this.
 		/// otherwise leave it as it is.
+		///
+		/// If you need to call this on transactions with different global transaction, use <see cref="PSBT.UpdateFrom(PSBT)"/> instead.
 		/// </summary>
-		/// <param name="other"></param>
-		/// <returns></returns>
+		/// <param name="other">Another PSBT to takes information from</param>
+		/// <exception cref="System.ArgumentException">Can not Combine PSBT with different global tx.</exception>
+		/// <returns>This instance</returns>
 		public PSBT Combine(PSBT other)
 		{
 			if (other == null)
@@ -352,11 +373,46 @@ namespace NBitcoin
 			if (other.tx.GetHash() != this.tx.GetHash())
 				throw new ArgumentException(paramName: nameof(other), message: "Can not Combine PSBT with different global tx.");
 
+			foreach (var xpub in other.GlobalXPubs)
+				this.GlobalXPubs.TryAdd(xpub.Key, xpub.Value);
+
 			for (int i = 0; i < Inputs.Count; i++)
-				this.Inputs[i].Combine(other.Inputs[i]);
+				this.Inputs[i].UpdateFrom(other.Inputs[i]);
 
 			for (int i = 0; i < Outputs.Count; i++)
-				this.Outputs[i].Combine(other.Outputs[i]);
+				this.Outputs[i].UpdateFrom(other.Outputs[i]);
+
+			foreach (var uk in other.unknown)
+				this.unknown.TryAdd(uk.Key, uk.Value);
+
+			return this;
+		}
+
+		/// <summary>
+		/// If an other PSBT has a specific field and this does not have it, then inject that field to this.
+		/// otherwise leave it as it is.
+		///
+		/// Contrary to <see cref="PSBT.Combine(PSBT)"/>, it can be called on PSBT with a different global transaction.
+		/// </summary>
+		/// <param name="other">Another PSBT to takes information from</param>
+		/// <returns>This instance</returns>
+		public PSBT UpdateFrom(PSBT other)
+		{
+			if (other == null)
+			{
+				throw new ArgumentNullException(nameof(other));
+			}
+
+			foreach (var xpub in other.GlobalXPubs)
+				this.GlobalXPubs.TryAdd(xpub.Key, xpub.Value);
+
+			foreach (var otherInput in other.Inputs)
+				this.Inputs.FindIndexedInput(otherInput.PrevOut)?.UpdateFrom(otherInput);
+
+
+			foreach (var otherOutput in other.Outputs)
+				foreach (var thisOutput in this.Outputs.Where(o => o.ScriptPubKey == otherOutput.ScriptPubKey))
+					thisOutput.UpdateFrom(otherOutput);
 
 			foreach (var uk in other.unknown)
 				this.unknown.TryAdd(uk.Key, uk.Value);
@@ -572,6 +628,32 @@ namespace NBitcoin
 		}
 
 		/// <summary>
+		/// Returns the virtual transaction size of the transaction. If the PSBT is finalized, then the exact virtual size.
+		/// </summary>
+		/// <param name="vsize">The calculated virtual size</param>
+		/// <returns>True if could get the virtual size could get estimated</returns>
+		public bool TryGetVirtualSize(out int vsize)
+		{
+			if (IsAllFinalized())
+			{
+				vsize = ExtractTransaction().GetVirtualSize();
+				return true;
+			}
+			var transactionBuilder = CreateTransactionBuilder();
+			transactionBuilder.AddCoins(GetAllCoins());
+			try
+			{
+				 vsize = transactionBuilder.EstimateSize(this.tx, true);
+				 return true;
+			}
+			catch
+			{
+				vsize = -1;
+				return false;
+			}
+		}
+
+		/// <summary>
 		/// Returns the fee rate of the transaction. If the PSBT is finalized, then the exact rate is returned, else an estimation is made.
 		/// </summary>
 		/// <returns>The estimated fee</returns>
@@ -591,15 +673,35 @@ namespace NBitcoin
 		{
 			return SignWithKeys(SigHash.All, keys.Select(k => k.PrivateKey).ToArray());
 		}
+		public PSBT SignWithKeys(SigningOptions signingOptions, params ISecret[] keys)
+		{
+			return SignWithKeys(signingOptions, keys.Select(k => k.PrivateKey).ToArray());
+		}
 
 		public PSBT SignWithKeys(SigHash sigHash, params Key[] keys)
+		{
+			return SignWithKeys(Normalize(new SigningOptions(sigHash)), keys);
+		}
+
+		internal SigningOptions Normalize(SigningOptions signingOptions)
+		{
+			// Handle legacy
+			if (Settings._UseLowR is bool v)
+			{
+				signingOptions = signingOptions.Clone();
+				signingOptions.EnforceLowR = v;
+			}
+			return signingOptions;
+		}
+
+		public PSBT SignWithKeys(SigningOptions signingOptions, params Key[] keys)
 		{
 			AssertSanity();
 			foreach (var key in keys)
 			{
 				foreach (var input in this.Inputs)
 				{
-					input.Sign(key, sigHash);
+					input.Sign(key, signingOptions);
 				}
 			}
 			return this;
@@ -613,7 +715,9 @@ namespace NBitcoin
 				transactionBuilder.Extensions.Clear();
 				transactionBuilder.Extensions.AddRange(Settings.CustomBuilderExtensions);
 			}
+#pragma warning disable CS0618 // Type or member is obsolete
 			transactionBuilder.UseLowR = Settings.UseLowR;
+#pragma warning restore CS0618 // Type or member is obsolete
 			return transactionBuilder;
 		}
 
@@ -655,6 +759,50 @@ namespace NBitcoin
 			var errors = CheckSanity();
 			if (errors.Count != 0)
 				throw new PSBTException(errors);
+		}
+
+
+		/// <summary>
+		/// Get the expected hash once the transaction is fully signed
+		/// </summary>
+		/// <param name="hash">The hash once fully signed</param>
+		/// <returns>True if we can know the expected hash. False if we can't (unsigned non-segwit).</returns>
+		public bool TryGetFinalizedHash(out uint256 hash)
+		{
+			var tx = GetGlobalTransaction();
+			for (int i = 0; i < Inputs.Count; i++)
+			{
+				if (Inputs[i].IsFinalized())
+				{
+					tx.Inputs[i].ScriptSig = Inputs[i].FinalScriptSig ?? Script.Empty;
+					tx.Inputs[i].WitScript = Inputs[i].WitnessScript ?? Script.Empty;
+				}
+				else if (Inputs[i].NonWitnessUtxo != null)
+				{
+					hash = null;
+					return false;
+				}
+				else if (Network.Consensus.SupportSegwit &&
+					Inputs[i].WitnessUtxo is TxOut utxo &&
+					utxo.ScriptPubKey.IsScriptType(ScriptType.P2SH) &&
+					Inputs[i].GetSignableCoin() is ScriptCoin sc &&
+					sc.GetP2SHRedeem() is Script p2shRedeem)
+				{
+					tx.Inputs[i].ScriptSig = PayToScriptHashTemplate.Instance.GenerateScriptSig(null as byte[][], p2shRedeem);
+				}
+				else if (Network.Consensus.SupportSegwit &&
+					Inputs[i].WitnessUtxo is TxOut utxo2 &&
+					!utxo2.ScriptPubKey.IsScriptType(ScriptType.P2SH))
+				{
+				}
+				else
+				{
+					hash = null;
+					return false;
+				}
+			}
+			hash = tx.GetHash();
+			return true;
 		}
 
 		#region IBitcoinSerializable Members
@@ -870,6 +1018,8 @@ namespace NBitcoin
 				var p2shp2wsh = redeem.WitHash.ScriptPubKey.Hash.ScriptPubKey;
 				foreach (var o in this.Inputs.OfType<PSBTCoin>().Concat(this.Outputs))
 				{
+					if (o is PSBTInput ii && ii.IsFinalized())
+						continue;
 					var txout = o.GetCoin()?.TxOut;
 					if (txout == null)
 						continue;
@@ -1031,7 +1181,7 @@ namespace NBitcoin
 		}
 
 		/// <summary>
-		/// Add keypath information to this PSBT
+		/// Add keypath information to this PSBT, if the PSBT all finalized this operation is a no-op
 		/// </summary>
 		/// <param name="pubkey">The public key which need to sign</param>
 		/// <param name="rootedKeyPath">The keypath to this public key</param>
@@ -1043,10 +1193,13 @@ namespace NBitcoin
 				throw new ArgumentNullException(nameof(pubkey));
 			if (rootedKeyPath == null)
 				throw new ArgumentNullException(nameof(rootedKeyPath));
-
+			if (IsAllFinalized())
+				return this;
 			var txBuilder = CreateTransactionBuilder();
 			foreach (var o in this.Inputs.OfType<PSBTCoin>().Concat(this.Outputs))
 			{
+				if (o is PSBTInput i && i.IsFinalized())
+					continue;
 				var coin = o.GetCoin();
 				if (coin == null)
 					continue;
@@ -1063,7 +1216,7 @@ namespace NBitcoin
 		/// <summary>
 		/// Rebase the keypaths.
 		/// If a PSBT updater only know the child HD public key but not the root one, another updater knowing the parent master key it is based on
-		/// can rebase the paths.
+		/// can rebase the paths. If the PSBT is all finalized this operation is a no-op
 		/// </summary>
 		/// <param name="accountKey">The current account key</param>
 		/// <param name="newRoot">The KeyPath with the fingerprint of the new root key</param>
@@ -1074,22 +1227,32 @@ namespace NBitcoin
 				throw new ArgumentNullException(nameof(accountKey));
 			if (newRoot == null)
 				throw new ArgumentNullException(nameof(newRoot));
+			if (IsAllFinalized())
+				return this;
 			accountKey = accountKey.AsHDKeyCache();
 			var accountKeyFP = accountKey.GetPublicKey().GetHDFingerPrint();
 			foreach (var o in HDKeysFor(accountKey).GroupBy(c => c.Coin))
 			{
+				if (o.Key is PSBTInput i && i.IsFinalized())
+					continue;
 				foreach (var keyPath in o)
 				{
-					o.Key.HDKeyPaths.Remove(keyPath.PubKey);
-					o.Key.HDKeyPaths.Add(keyPath.PubKey, newRoot.Derive(keyPath.RootedKeyPath.KeyPath));
+					if (keyPath.RootedKeyPath.MasterFingerprint != newRoot.MasterFingerprint)
+					{
+						o.Key.HDKeyPaths.Remove(keyPath.PubKey);
+						o.Key.HDKeyPaths.Add(keyPath.PubKey, newRoot.Derive(keyPath.RootedKeyPath.KeyPath));
+					}
 				}
 			}
 			foreach (var xpub in GlobalXPubs.ToList())
 			{
 				if (xpub.Key.ExtPubKey.PubKey == accountKey.GetPublicKey())
 				{
-					GlobalXPubs.Remove(xpub.Key);
-					GlobalXPubs.Add(xpub.Key, newRoot.Derive(xpub.Value.KeyPath));
+					if (xpub.Value.MasterFingerprint != newRoot.MasterFingerprint)
+					{
+						GlobalXPubs.Remove(xpub.Key);
+						GlobalXPubs.Add(xpub.Key, newRoot.Derive(xpub.Value.KeyPath));
+					}
 				}
 			}
 			return this;

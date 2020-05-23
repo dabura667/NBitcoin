@@ -182,7 +182,7 @@ namespace NBitcoin.Altcoins
 					{
 					}
 				}
-				return base.TryParse(str, network, out result);
+				return base.TryParse(str, network, targetType, out result);
 			}
 		}
 

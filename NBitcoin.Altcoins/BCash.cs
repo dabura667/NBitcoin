@@ -161,7 +161,7 @@ namespace NBitcoin.Altcoins
 		Tuple.Create(new byte[]{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xff,0xff,0xcf,0x9a,0xd2,0xde}, 10201),
 		Tuple.Create(new byte[]{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xff,0xff,0xda,0xf4,0x92,0x6f}, 18333)
 };
-		
+
 		class BCashConsensusFactory : ConsensusFactory
 		{
 			private BCashConsensusFactory()
@@ -246,7 +246,7 @@ namespace NBitcoin.Altcoins
 					}
 					catch { }
 				}
-				return base.TryParse(str, network, out result);
+				return base.TryParse(str, network, targetType, out result);
 			}
 
 			public override BitcoinPubKeyAddress CreateP2PKH(KeyId keyId, Network network)
@@ -302,7 +302,8 @@ namespace NBitcoin.Altcoins
 				CoinbaseMaturity = 100,
 				MinimumChainWork = new uint256("0000000000000000000000000000000000000000007e5dbf54c7f6b58a6853cd"),
 				ConsensusFactory = BCashConsensusFactory.Instance,
-				SupportSegwit = false
+				SupportSegwit = false,
+				NeverNeedPreviousTxForSigning = true
 			})
 			// See https://support.bitpay.com/hc/en-us/articles/115004671663-BitPay-s-Adopted-Conventions-for-Bitcoin-Cash-Addresses-URIs-and-Payment-Requests
 			// Note: This is not compatible with Bitcoin ABC

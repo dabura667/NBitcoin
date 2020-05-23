@@ -8,9 +8,12 @@ namespace NBitcoin.Altcoins
 {
 	public class AltNetworkSets
 	{
+		public static Argoneum Argoneum { get; } = Argoneum.Instance;
 		public static BCash BCash { get; } = BCash.Instance;
 		public static BGold BGold { get; } = BGold.Instance;
 		public static Dash Dash { get; } = Dash.Instance;
+		public static Verge Verge { get; } = Verge.Instance;
+		public static Terracoin Terracoin { get; } = Terracoin.Instance;
 		public static Mogwai Mogwai { get; } = Mogwai.Instance;
 		public static Dogecoin Dogecoin { get; } = Dogecoin.Instance;
 		public static Dystem Dystem { get; } = Dystem.Instance;
@@ -32,9 +35,11 @@ namespace NBitcoin.Altcoins
 		public static Chaincoin Chaincoin { get; } = Chaincoin.Instance;
 		public static Stratis Stratis { get; } = Stratis.Instance;
 		public static ZCoin ZCoin { get; } = ZCoin.Instance;
+		public static DogeCash DogeCash { get; } = DogeCash.Instance;
 
 		public static IEnumerable<INetworkSet> GetAll()
 		{
+			yield return Argoneum;
 			yield return Bitcoin;
 			yield return Bitcore;
 			yield return Litecoin;
@@ -47,6 +52,8 @@ namespace NBitcoin.Altcoins
 			yield return Polis;
 			yield return Monacoin;
 			yield return Dash;
+			//yield return Verge;
+			yield return Terracoin;
 			yield return Mogwai;
 			yield return Ufo;
 			yield return Groestlcoin;
@@ -59,6 +66,7 @@ namespace NBitcoin.Altcoins
 			yield return Bitcoinplus;
 			yield return Chaincoin;
 			yield return ZCoin;
+			//yield return DogeCash;
 		}
 	}
 }

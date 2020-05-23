@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace NBitcoin.Tests
 {
@@ -140,6 +140,34 @@ namespace NBitcoin.Tests
 				},
 				UseSectionInConfigFile = true
 			};
+
+			public NodeDownloadData v0_19_0_1 = new NodeDownloadData()
+			{
+				Version = "0.19.0.1",
+				Linux = new NodeOSDownloadData()
+				{
+					Archive = "bitcoin-{0}-x86_64-linux-gnu.tar.gz",
+					DownloadLink = "https://bitcoincore.org/bin/bitcoin-core-{0}/bitcoin-{0}-x86_64-linux-gnu.tar.gz",
+					Executable = "bitcoin-{0}/bin/bitcoind",
+					Hash = "732cc96ae2e5e25603edf76b8c8af976fe518dd925f7e674710c6c8ee5189204"
+				},
+				Mac = new NodeOSDownloadData()
+				{
+					Archive = "bitcoin-{0}-osx64.tar.gz",
+					DownloadLink = "https://bitcoincore.org/bin/bitcoin-core-{0}/bitcoin-{0}-osx64.tar.gz",
+					Executable = "bitcoin-{0}/bin/bitcoind",
+					Hash = "a64e4174e400f3a389abd76f4d6b1853788730013ab1dedc0e64b0a0025a0923"
+				},
+				Windows = new NodeOSDownloadData()
+				{
+					Executable = "bitcoin-{0}/bin/bitcoind.exe",
+					DownloadLink = "https://bitcoincore.org/bin/bitcoin-core-{0}/bitcoin-{0}-win64.zip",
+					Archive = "bitcoin-{0}-win64.zip",
+					Hash = "7706593de727d893e4b1e750dc296ea682ccee79acdd08bbc81eaacf3b3173cf"
+				},
+				UseSectionInConfigFile = true
+			};
+
 		}
 
 		public class LitecoinNodeDownloadData
@@ -451,6 +479,64 @@ namespace NBitcoin.Tests
 			//};
 		}
 
+		public class TerracoinNodeDownloadData
+		{
+			public NodeDownloadData v0_12_2 = new NodeDownloadData()
+			{
+				Version = "0.12.2.5",
+				Windows = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://terracoin.io/bin/terracoin-core-{0}/terracoin-0.12.2-win64.zip",
+					Archive = "terracoin-0.12.2-win64.zip",
+					Executable = "terracoin-0.12.2/bin/terracoind.exe",
+					Hash = "5d87ede8097557aa02380c6d0b1f15af7e9b3edb0ba31ff6809a33b41051bbef"
+				},
+				Linux = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://terracoin.io/bin/terracoin-core-{0}/terracoin-0.12.2-x86_64-linux-gnu.tar.gz",
+					Archive = "terracoin-0.12.2-x86_64-linux-gnu.tar.gz",
+					Executable = "terracoin-0.12.2/bin/terracoind",
+					Hash = "a983cb9ca990b77566017fbccfaf70b42cf8947a6f82f247bace19a332ce18e3"
+				},
+				Mac = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://terracoin.io/bin/terracoin-core-{0}/terracoin-0.12.2-osx64.tar.gz",
+					Archive = "terracoin-0.12.2-osx64.tar.gz",
+					Executable = "terracoin-0.12.2/bin/terracoind",
+					Hash = "51ae932f276be131c5b938e4d7dd710e8a0af3ea8a5ca46aaac8366eafc22c49"
+				}
+			};
+		}
+
+		public class VergeNodeDownloadData
+		{
+			public NodeDownloadData v6_0_2 = new NodeDownloadData()
+			{
+				Version = "6.0.2",
+				Windows = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/vergecurrency/verge/releases/download/v6.0.2/verge-6.0.2-win64.zip",
+					Archive = "verge-6.0.2-win64.zip",
+					Executable = "verge-6.0.2/bin/verged.exe",
+					Hash = "6334d5222309337271b47ccf6129a282144c81682c691d9624c35219769e5fb4"
+				},
+				Linux = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/vergecurrency/verge/releases/download/v6.0.2/verge-6.0.2-x86_64-linux-gnu.tar.gz",
+					Archive = "verge-6.0.2-x86_64-linux-gnu.tar.gz",
+					Executable = "verge-6.0.2/bin/verged",
+					Hash = "cdcb797d9bb11e9fe8062acd9ca46c5bafb02c4868f3c02fd417037584efd721"
+				},
+				Mac = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/vergecurrency/verge/releases/download/v6.0.2/verge-6.0.2-osx64.tar.gz",
+					Archive = "verge-6.0.2-osx64.tar.gz",
+					Executable = "verge-6.0.2/bin/verged",
+					Hash = "bb3ef22d6e589162c3ff8a3de72a6bd0a80ec0000aa2573960865d3d0f8703c2"
+				}
+			};
+		}
+
 		public class DystemNodeDownloadData
 		{
 			public NodeDownloadData v1_0_9_9 = new NodeDownloadData()
@@ -711,6 +797,87 @@ namespace NBitcoin.Tests
 					Hash = "4976c8f60105a32bb0d8e230577f60438d5bed45a9aa92c51f0dd79a13c6b89e",
 					CreateFolder = "GRS-{0}"
 				}
+			};
+
+			public NodeDownloadData v2_17_2 = new NodeDownloadData()
+			{
+				Version = "2.17.2",
+				Windows = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/Groestlcoin/groestlcoin/releases/download/v{0}/groestlcoin-{0}-x86_64-w64-mingw32.zip",
+					Archive = "groestlcoin-{0}-x86_64-w64-mingw32.zip",
+					Executable = "groestlcoin-{0}/bin/groestlcoind.exe",
+					Hash = "2378209ef954d50cd82ae70f04b4fc5e07d16e11f13c7183a6647f8d60de1f85"
+				},
+				Linux = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/Groestlcoin/groestlcoin/releases/download/v{0}/groestlcoin-{0}-x86_64-linux-gnu.tar.gz",
+					Archive = "groestlcoin-{0}-x86_64-linux-gnu.tar.gz",
+					Executable = "groestlcoin-{0}/bin/groestlcoind",
+					Hash = "e90f6ceb56fbc86ae17ee3c5d6d3913c422b7d98aa605226adb669acdf292e9e"
+				},
+				Mac = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/Groestlcoin/groestlcoin/releases/download/v{0}/groestlcoin-{0}-x86_64-apple-darwin11.tar.gz",
+					Archive = "groestlcoin-{0}-x86_64-apple-darwin11.tar.gz",
+					Executable = "groestlcoin-{0}/bin/groestlcoind",
+					Hash = "b3fe245752a445ce56cac265af7ed63906c7c1c8e2c932891369be72c290307d"
+				},
+				UseSectionInConfigFile = true
+			};
+
+			public NodeDownloadData v2_18_2 = new NodeDownloadData()
+			{
+				Version = "2.18.2",
+				Windows = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/Groestlcoin/groestlcoin/releases/download/v{0}/groestlcoin-{0}-win64.zip",
+					Archive = "groestlcoin-{0}-win64.zip",
+					Executable = "groestlcoin-{0}/bin/groestlcoind.exe",
+					Hash = "44ab9b896db1c8492facc1f6353ea6b59e72328a38859a419a08113520e9c0b8"
+				},
+				Linux = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/Groestlcoin/groestlcoin/releases/download/v{0}/groestlcoin-{0}-x86_64-linux-gnu.tar.gz",
+					Archive = "groestlcoin-{0}-x86_64-linux-gnu.tar.gz",
+					Executable = "groestlcoin-{0}/bin/groestlcoind",
+					Hash = "9ee26e1cd7967d0dc88670dbbdb99f95236ebc218f75977efb23f03ad8b74250"
+				},
+				Mac = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/Groestlcoin/groestlcoin/releases/download/v{0}/groestlcoin-{0}-osx64.tar.gz",
+					Archive = "groestlcoin-{0}-osx64.tar.gz",
+					Executable = "groestlcoin-{0}/bin/groestlcoind",
+					Hash = "fdb722b326433501b179a33ac20e88b5fd587a249878eb94a9981da2097c42a5"
+				},
+				UseSectionInConfigFile = true
+			};
+
+			public NodeDownloadData v2_19_1 = new NodeDownloadData()
+			{
+				Version = "2.19.1",
+				Windows = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/Groestlcoin/groestlcoin/releases/download/v{0}/groestlcoin-{0}-win64.zip",
+					Archive = "groestlcoin-{0}-win64.zip",
+					Executable = "groestlcoin-{0}/bin/groestlcoind.exe",
+					Hash = "27e1518b80d6212bc7dcb45fd20d4b12553f8872600996aedd8bf3dd33783e48"
+				},
+				Linux = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/Groestlcoin/groestlcoin/releases/download/v{0}/groestlcoin-{0}-x86_64-linux-gnu.tar.gz",
+					Archive = "groestlcoin-{0}-x86_64-linux-gnu.tar.gz",
+					Executable = "groestlcoin-{0}/bin/groestlcoind",
+					Hash = "0646cae023a0be0821f357d33bdbf81fc05fc9a9e3e9d4e5936d5053f1a988d4"
+				},
+				Mac = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/Groestlcoin/groestlcoin/releases/download/v{0}/groestlcoin-{0}-osx64.tar.gz",
+					Archive = "groestlcoin-{0}-osx64.tar.gz",
+					Executable = "groestlcoin-{0}/bin/groestlcoind",
+					Hash = "902d38bea03fded2762acd1855cddd4a7b210acac9921ea56d816e622c4244ba"
+				},
+				UseSectionInConfigFile = true
 			};
 		}
 
@@ -1092,6 +1259,67 @@ namespace NBitcoin.Tests
 			};
 		}
 
+		public class DogeCashNodeDownloadData
+		{
+			public NodeDownloadData v5_1_1 = new NodeDownloadData()
+			{
+				Version = "5.1.1",
+				Windows = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/dogecash/dogecash/releases/download/v5.0.1/DogeCash-5.0.1-win32.zip",
+					Archive = "DogeCash-5.0.1-win32.zip",
+					Executable = "dogecashd.exe",
+					Hash = "d78968049874617b9703323bf9ca03a8d140ebf605fff415437693abe3ccc5a0"
+				},
+				Linux = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/dogecash/dogecash/releases/download/v5.0.1/DogeCash-5.0.1-x86_64-linux-gnu.tar.gz",
+					Archive = "DogeCash-5.0.1-x86_64-linux-gnu.tar.gz",
+					Executable = "dogecashd",
+					Hash = "D8738E8C3D97A3B776414278991EDCCD1E555756713911FDC21E77836D00A3F9"
+				},
+				Mac = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/dogecash/dogecash/releases/download/v5.0.1/DogeCash-5.0.1-osx-unsigned.dmg",
+					Archive = "DogeCash-5.0.1-osx-unsigned.dmg",
+					Executable = "DogeCash-5.0.1-osx-unsigned.dmg",
+					Hash = "13B0DBF2480EB47D2B8A5B82145FE2FC87AEF22CB5CDF78E01C27A41C8CD41D1"
+				}
+			};
+		}
+
+		public class ArgoneumNodeDownloadData
+		{
+			// Note that Argoneum has mining disabled by default in offical Windows and Mac binaries as per
+			// https://github.com/dashpay/dash/pull/2778 and https://github.com/dashpay/dash/issues/2998.
+			// Without generate or generatetoaddress RPC calls the ability to run automated tests is very limited.
+			public NodeDownloadData v1_4_1 = new NodeDownloadData()
+			{
+				Version = "1.4.1",
+				Windows = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/Argoneum/argoneum/releases/download/v{0}.0/argoneum-{0}-win64.zip",
+					Archive = "argoneum-{0}-win64.zip",
+					Executable = "argoneum-1.4.1/bin/argoneumd.exe",
+					Hash = "06ed74f14135b7fc5d7c6618723cf7e385ac36303e5f83c632241dba9a095248"
+				},
+				Linux = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/Argoneum/argoneum/releases/download/v{0}.0/argoneum-{0}-x86_64-linux-gnu.tar.gz",
+					Archive = "argoneum-{0}-x86_64-linux-gnu.tar.gz",
+					Executable = "argoneum-1.4.1/bin/argoneumd",
+					Hash = "821e98b2af5c8f12ca39dd399925bdffed400ff702940f45ddf5ad375987d3f6"
+				},
+				Mac = new NodeOSDownloadData()
+				{
+					DownloadLink = "https://github.com/Argoneum/argoneum/releases/download/v{0}.0/argoneum-{0}-osx64.tar.gz",
+					Archive = "argoneum-{0}-osx64.tar.gz",
+					Executable = "argoneum-1.4.1/bin/argoneumd",
+					Hash = "7c6dd15bd87042d57ce73c6b124586d33f014ae74b66299e29b926f7a361e5be"
+				}
+			};
+		}
+
 		public static GoByteNodeDownloadData GoByte
 		{
 			get; set;
@@ -1150,6 +1378,11 @@ namespace NBitcoin.Tests
 		{
 			get; set;
 		} = new DashNodeDownloadData();
+
+		public static TerracoinNodeDownloadData Terracoin
+		{
+			get; set;
+		} = new TerracoinNodeDownloadData();
 
 		public static BGoldNodeDownloadData BGold
 		{
@@ -1220,6 +1453,16 @@ namespace NBitcoin.Tests
 		{
 			get; set;
 		} = new ZCoinNodeDownloadData();
+
+		public static DogeCashNodeDownloadData DogeCash
+		{
+			get; set;
+		} = new DogeCashNodeDownloadData();
+
+		public static ArgoneumNodeDownloadData Argoneum
+		{
+			get; set;
+		} = new ArgoneumNodeDownloadData();
 
 		public bool UseSectionInConfigFile { get; private set; }
 		public string AdditionalRegtestConfig { get; private set; }
