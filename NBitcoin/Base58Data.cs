@@ -65,7 +65,7 @@ namespace NBitcoin
 
 		protected Base58Data(byte[] rawBytes, Network network)
 		{
-			if (network == null)
+			if (network is null)
 				throw new ArgumentNullException(nameof(network));
 			_Network = network;
 			SetData(rawBytes);
