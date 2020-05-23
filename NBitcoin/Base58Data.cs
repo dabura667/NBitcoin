@@ -37,7 +37,7 @@ namespace NBitcoin
 
 		protected Base58Data(string base58, Network expectedNetwork)
 		{
-			if (base58 == null)
+			if (base58 is null)
 				throw new ArgumentNullException(nameof(base58));
 			if (expectedNetwork is null)
 				throw new ArgumentNullException(nameof(expectedNetwork));
