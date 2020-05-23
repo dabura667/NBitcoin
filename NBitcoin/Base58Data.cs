@@ -39,7 +39,7 @@ namespace NBitcoin
 		{
 			if (base58 == null)
 				throw new ArgumentNullException(nameof(base58));
-			if (expectedNetwork == null)
+			if (expectedNetwork is null)
 				throw new ArgumentNullException(nameof(expectedNetwork));
 			_Network = expectedNetwork;
 
